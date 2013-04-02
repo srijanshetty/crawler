@@ -19,12 +19,12 @@ def getHTML(link):
 		response=opener.open(request)
 	except urllib2.HTTPError, e:
 	    print 'The server couldn\'t fulfill the request.'
-	    print 'Error code: ', e.code
+	    print 'Error code: ',e.code
 	    return None
 	except urllib2.URLError, e:
-	    print 'We failed to reach a server.'
-	    print 'Reason: ', e.reason
-	    return None
+		print 'We failed to reach a server.'
+		print 'Reason: ',e.reason
+		return None
 
 	# Get the HTML from the page
 	return response.read()
@@ -34,7 +34,7 @@ def getDeadline(soup):
 	
 	text=soup.findAll(text=True)
 	for line in text:
-		deadline=re.findall(r'Deadline.*', str(line)) # Find all strings matching deadline
+		deadline=re.findall(r'[Dd]eadline.*', str(line)) # Find all strings matching deadline
 		if (deadline):
 			print deadline
 	
@@ -53,7 +53,7 @@ def crawl(main_link,depth):
 		getDeadline(soup) # Processing statement
 	except urllib2.URLError:
 		print 'We failed to reach a server.'
-	    print 'Reason: ', e.reason
+		print 'Reason: ', e.reason
 	  	return None
 
 	# Checking for depth
