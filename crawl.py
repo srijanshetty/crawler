@@ -2,13 +2,25 @@
 import urllib2
 from BeautifulSoup import BeautifulSoup
 import re
-from urlparse import urljoin
+from urlparse import urljoin, urlparse
 import sys,traceback
+import os
 
+# The seed urls
+seeds=["http://confsearch.org"]	
 processed_urls=[]
+deadline_urls=[]
+
+def databaseAppend(database, data):
+	"""Adds given tuple to database"""
+
+	if(os.path.exists):
+		conn=sqlite3.connect(database)
 
 def getHTML(link):
-	"""Extract HTML from a page and return HTML text"""
+	"""Extract HTML from a page and return HTML text
+		Arguments: link
+	"""
 
 	# Request for the page and provide the site with our User-Agent
 	# try and except check for common HTML Errors
@@ -29,17 +41,23 @@ def getHTML(link):
 	# Get the HTML from the page
 	return response.read()
 
-def getDeadline(soup):
-	"""Extracts deadline from a given soup element"""
+def getDeadline(soup,link):
+	"""Extracts deadline from a given soup element
+		Arguments: soup object, link
+	"""
 	
-	text=soup.findAll(text=True)
+	text=soup.findAll(text=True) # Extract text from the soup object
 	for line in text:
-		deadline=re.findall(r'[Dd]eadline.*', str(line)) # Find all strings matching deadline
+		deadline=re.findall(r'[Dd]eadline.*\d.*', str(line)) # Find all strings matching deadline
 		if (deadline):
-			print deadline
+			# Now we get the base url from the link and add this entry into the database
+			base_url=urlparse(link).netloc
+			print base_url, deadline
 	
 def crawl(main_link,depth):
-	"""Extracts HTML from a URL, and gets the links from them"""
+	"""Extracts HTML from a URL, and gets the links from them
+	Arguments: link, depth_crawling
+	"""
 
 	# Create a soup and check for HTML Errors
 	HTML=getHTML(main_link)
@@ -50,7 +68,7 @@ def crawl(main_link,depth):
 
 	# Do data processing over here
 	try:
-		getDeadline(soup) # Processing statement
+		getDeadline(soup,main_link) # Processing statement
 	except urllib2.URLError:
 		print 'We failed to reach a server.'
 		print 'Reason: ', e.reason
@@ -76,9 +94,6 @@ def crawl(main_link,depth):
 def frontier():
 	""" Loops through all the seed URLS"""
 	
-	# The seed urls
-	seeds=["http://algo2013.inria.fr/esa-call.shtml"]
-	
 	# Checking whether the depth argument is passed in the call to the program or not
 	try:
 		depth=int(sys.argv[1])
@@ -95,12 +110,11 @@ def frontier():
 			crawl(seed,depth)
 
 if __name__ == '__main__':
+	reload(sys)
+	sys.setdefaultencoding("utf-8")
 	try:
 		frontier()
 	except KeyboardInterrupt:
 		sys.exit()
 	except Exception, e:
 		traceback.print_exc()
-
-
-
