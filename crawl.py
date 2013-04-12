@@ -6,16 +6,16 @@ from urlparse import urljoin, urlparse
 import sys,traceback
 import os
 
-# The seed urls
-seeds=["http://confsearch.org"]	
+# For searching google
+from google import search						
+
+# Global variables
 processed_urls=[]
+blacklist_urls=[]
 deadline_urls=[]
 
-def databaseAppend(database, data):
-	"""Adds given tuple to database"""
-
-	if(os.path.exists):
-		conn=sqlite3.connect(database)
+# File to store the urls
+processed_urls_file=open('processed_urls','w')
 
 def getHTML(link):
 	"""Extract HTML from a page and return HTML text
@@ -40,7 +40,7 @@ def getHTML(link):
 
 	# Get the HTML from the page
 	return response.read()
-
+	
 def getDeadline(soup,link):
 	"""Extracts deadline from a given soup element
 		Arguments: soup object, link
@@ -53,7 +53,7 @@ def getDeadline(soup,link):
 			# Now we get the base url from the link and add this entry into the database
 			base_url=urlparse(link).netloc
 			print base_url, deadline
-	
+
 def crawl(main_link,depth):
 	"""Extracts HTML from a URL, and gets the links from them
 	Arguments: link, depth_crawling
@@ -67,12 +67,6 @@ def crawl(main_link,depth):
 		return None # Nothing to do if we get a null from the URL
 
 	# Do data processing over here
-	try:
-		getDeadline(soup,main_link) # Processing statement
-	except urllib2.URLError:
-		print 'We failed to reach a server.'
-		print 'Reason: ', e.reason
-	  	return None
 
 	# Checking for depth
 	if(depth==0):
@@ -86,32 +80,66 @@ def crawl(main_link,depth):
 		urls=re.findall(r'href=["]([^"]*)["]','%s' %link)  # Regex for the URL 
 		for url in urls:
 			temp_url=urljoin(main_link,url)
-			if(temp_url not in processed_urls): # Check if the URL is in processed list
+			if(temp_url not in processed_urls and temp_url not in blacklist_urls): # Check if the URL is in processed list
 				processed_urls.append(temp_url)
-				print '\nCrawing URL: %s' %temp_url
+				processed_urls_file.write("%s\n" %temp_url)
+				print '\nCrawling URL: %s' %temp_url
 				crawl(temp_url,depth-1) # Search for more links
 	
 def frontier():
-	""" Loops through all the seed URLS"""
+	""" Does a google search and then crawls"""
 	
-	# Checking whether the depth argument is passed in the call to the program or not
+	# Checking for parameters
 	try:
-		depth=int(sys.argv[1])
+		search_query=str(sys.argv[1])
 	except IndexError:
+		print "You have not enter a search string.\nExiting Now"
+		sys.exit()
+	
+	try:
+		depth=int(sys.argv[2])
+	except IndexError:
+		print "You have not entered the depth of crawl, using 1 as the depth"
 		depth=1
 
-	print '\nStarting the crawling'
+	# Loading the list of blacklist_urls
+	try:
+		blacklist_file=open('blacklist.txt','r')
+	except IOError:
+		pass
+	else:
+		for item in blacklist_file.read().split('\n'):
+			blacklist_urls.append(item)
+		
+	print '\n############Starting the crawl##############'
 
-	# Looping through the seeds in our seeds list
-	for seed in seeds:
-		if(seed not in processed_urls): # Check if the URL is in processed list or urls
-			processed_urls.append(seed)
-			print '\nSeed URL: %s' %seed
-			crawl(seed,depth)
+	# Performing a google search and looping through the results
+	try:
+		google_search=search(search_query, stop=20)
+	except urllib2.HTTPError, e:
+	    print 'The server couldn\'t fulfill the request.'
+	    print 'Error code: ',e.code
+	    return None
+	except urllib2.URLError, e:
+		print 'We failed to reach a server.'
+		print 'Reason: ',e.reason
+		return None
+
+	for url in google_search:
+		if(urlparse(url).netloc in blacklist_urls):
+			print "\nSkipping URL: %s" %url
+			processed_urls.append(url)
+		else:
+			print "\nCrawling URL: %s" %url
+			crawl(url,depth)		
 
 if __name__ == '__main__':
+	
+	# Changing the encoding of the file
 	reload(sys)
 	sys.setdefaultencoding("utf-8")
+	
+	# Executing the code
 	try:
 		frontier()
 	except KeyboardInterrupt:
