@@ -48,7 +48,7 @@ def getDeadline(soup,link):
 	
 	text=soup.findAll(text=True) # Extract text from the soup object
 	for line in text:
-		deadline=re.findall(r'[Dd]eadline.*\d.*', str(line)) # Find all strings matching deadline
+		deadline=re.findall(r'[Ss]ubmission\s[Dd]eadline.*\d.*', str(line)) # Find all strings matching deadline
 		if (deadline):
 			# Now we get the base url from the link and add this entry into the database
 			base_url=urlparse(link).netloc
@@ -67,6 +67,12 @@ def crawl(main_link,depth):
 		return None # Nothing to do if we get a null from the URL
 
 	# Do data processing over here
+	try:
+		getDeadline(soup,main_link) # Processing statement
+	except urllib2.URLError:
+		print 'We failed to reach a server.'
+		print 'Reason: ', e.reason
+	  	return None
 
 	# Checking for depth
 	if(depth==0):
@@ -116,22 +122,21 @@ def frontier():
 	# Performing a google search and looping through the results
 	try:
 		google_search=search(search_query, stop=20)
+		for url in google_search:
+			if(urlparse(url).netloc in blacklist_urls):
+				print "\nSkipping URL: %s" %url
+				processed_urls.append(url)
+			else:
+				print "\nCrawling URL: %s" %url
+				crawl(url,depth)
 	except urllib2.HTTPError, e:
 	    print 'The server couldn\'t fulfill the request.'
 	    print 'Error code: ',e.code
-	    return None
 	except urllib2.URLError, e:
 		print 'We failed to reach a server.'
 		print 'Reason: ',e.reason
-		return None
 
-	for url in google_search:
-		if(urlparse(url).netloc in blacklist_urls):
-			print "\nSkipping URL: %s" %url
-			processed_urls.append(url)
-		else:
-			print "\nCrawling URL: %s" %url
-			crawl(url,depth)		
+			
 
 if __name__ == '__main__':
 	
