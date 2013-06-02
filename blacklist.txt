@@ -10,3 +10,6 @@ twitter.com
 www.twitter.com
 ebay.com
 www.ebay.com
+amazon.com
+www.amazong.com
+en.wikipedia.org
